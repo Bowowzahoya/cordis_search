@@ -8,7 +8,7 @@ import logging
 log = logging.getLogger(__name__)
 
 def search(projects_dataframe, queries, **index_arguments):
-    if not isinstance(queries, list):
+    if isinstance(queries, str):
         queries = [queries]
     
     log.info(f"Creating index for dataframe of length {len(projects_dataframe)}.")
@@ -18,10 +18,13 @@ def search(projects_dataframe, queries, **index_arguments):
         log.info(f"Searching for query {query}.")
         ids = search_index(whoosh_index, query, **index_arguments)
 
-        projects_dataframe = projects_dataframe.set_index(ID_COL, drop=True)
-        print(projects_dataframe)
+        
         ids = [int(i) for i in ids]
-        selected_projects = projects_dataframe.loc[ids]
+        if len(ids) == 0:
+            yield pd.DataFrame(columns=projects_dataframe.columns)
+            
+        projects_dataframe_with_id_index = projects_dataframe.set_index(ID_COL, drop=True)
+        selected_projects = projects_dataframe_with_id_index.loc[ids]
 
         yield selected_projects
 
@@ -42,8 +45,6 @@ def summary(selected_projects, all_projects=None):
     ec_contribution_per_year = selected_projects.groupby(YEAR_COL)[EC_MAX_CONTRIBUTION_COL].sum()
     print(ec_contribution_per_year)
     return budget_per_year, ec_contribution_per_year
-
-
 
 def _get_year(dates):
     return pd.DatetimeIndex(dates).year
