@@ -11,10 +11,9 @@ from whoosh.qparser import QueryParser
 
 from .constants import *
 
-def create_index(lens_export, index_directory=".whoosh_index/",
-        id_column=LENS_ID_COL,
-        text_columns=[TITLE_COL, ABSTRACT_COL],
-        keyword_columns=[FIELDS_OF_STUDY_COL]):
+def create_index(dataframe, index_directory=".whoosh_index/",
+        id_column=ID_COL,
+        text_columns=[TITLE_COL, OBJECTIVE_COL]):
     # create schema and directory
     
     regex_tokenizer = RegexTokenizer(expression=re.compile('\\w+(\\.?\\w+)*'), gaps=False)
@@ -22,12 +21,8 @@ def create_index(lens_export, index_directory=".whoosh_index/",
     stem_filter = StemFilter(lang='en', cachesize=50000)
     analyzer =  regex_tokenizer | lower_case_filter | stem_filter
 
-    spaceless_id_column = id_column.replace(" ", "_") # whoosh indices can't have spaces
-    spaceless_text_columns = [col.replace(" ", "_") for col in text_columns]
-    spaceless_keyword_columns = [col.replace(" ", "_") for col in keyword_columns]
-    schema_dictionary = {spaceless_id_column: TEXT(stored=True)}
-    schema_dictionary.update({col: TEXT(stored=False, analyzer=analyzer) for col in spaceless_text_columns})
-    schema_dictionary.update({col: KEYWORD(stored=False, analyzer=analyzer) for col in spaceless_keyword_columns})
+    schema_dictionary = {id_column: TEXT(stored=True)}
+    schema_dictionary.update({col: TEXT(stored=False, analyzer=analyzer) for col in text_columns})
     schema = Schema(**schema_dictionary)
 
     if not os.path.exists(index_directory):
@@ -37,17 +32,16 @@ def create_index(lens_export, index_directory=".whoosh_index/",
     whoosh_index = index.create_in(index_directory, schema)
     writer = whoosh_index.writer()
 
-    for i in range(len(lens_export)):
-        row = lens_export.iloc[i]
-        row_dictionary = {spaceless_id_column: str(row[id_column])}
-        row_dictionary.update({scol: str(row[col]) for scol, col in zip(spaceless_text_columns, text_columns)})
-        row_dictionary.update({scol: str(row[col]) for scol, col in zip(spaceless_keyword_columns, keyword_columns)})
+    for i in range(len(dataframe)):
+        row = dataframe.iloc[i]
+        row_dictionary = {id_column: str(row[id_column])}
+        row_dictionary.update({scol: str(row[col]) for scol, col in zip(text_columns, text_columns)})
         writer.add_document(**row_dictionary)
     writer.commit()
 
     return whoosh_index
 
-def search_index(whoosh_index, search_fields, query):
+def search_index(whoosh_index, query, search_fields=[TITLE_COL, OBJECTIVE_COL]):
     if not isinstance(query, str):
         return []
 
