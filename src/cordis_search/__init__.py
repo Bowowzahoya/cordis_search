@@ -1,4 +1,4 @@
-from .wrapper import search
+from .wrapper import search, summary
 from .constants import SEPARATOR
 
 import logging

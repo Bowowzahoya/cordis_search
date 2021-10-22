@@ -12,4 +12,7 @@ def test_search():
     selected_projects = wr.search(TEST_PROJECTS_FILE, query)
     assert set(selected_projects.index.to_list()) == set([267583, 287711])
 
-test_search()
+def test_summary():
+    wr.summary(TEST_PROJECTS_FILE)
+
+test_summary()
